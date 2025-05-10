@@ -1,0 +1,2 @@
+Building: ali baba with capacity 120
+Electric Bus: lec100
