@@ -412,7 +412,7 @@ public:
 
         for (const auto &d : data)
         {
-            sumX += d.cox;
+            1 sumX += d.cox;
             sumY += d.temp;
             sumX2 += d.cox * d.cox;
             sumXY += d.cox * d.temp;

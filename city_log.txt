@@ -7,3 +7,9 @@ Building: aad ka mehel with capacity 12
 Combustion Car: aac1234
 EcoActivity: ree drive (Area: 23.000000 sqm, Duration: 12 months)
 EcoActivity: 4th august drive (Area: 100.000000 sqm, Duration: 10 months)
+Building: ggg with capacity 5
+Combustion Car: mnb
+EcoActivity: mmm (Area: 25.000000 sqm, Duration: 3 months)
+Building: bdullah ka ghar with capacity 15
+Combustion Car: abdullah ki gari
+EcoActivity: tree plantation (Area: 120.000000 sqm, Duration: 12 months)
