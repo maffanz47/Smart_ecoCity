@@ -205,7 +205,7 @@ public:
 
     void updateTofile() override
     {
-        fstream file("eco_activities.txt", ios::app);
+        fstream file("activities.txt", ios::app);
         if (file)
         {
             file << name << "-" << area << "-" << durationMonths << "\n";
@@ -231,7 +231,7 @@ public:
 
     string toString() const override
     {
-        return "EcoActivity: " + name + " (Area: " + to_string(area) + " m², Duration: " + to_string(durationMonths) + " months)";
+        return "EcoActivity: " + name + " (Area: " + to_string(area) + " sqm, Duration: " + to_string(durationMonths) + " months)";
     }
 };
 
@@ -322,7 +322,7 @@ public:
 
         for (int iter = 0; iter < maxIterations; ++iter)
         {
-            // Assign points to nearest centroid
+
             for (auto &p : points)
             {
                 double minDist = numeric_limits<double>::max();
@@ -337,7 +337,6 @@ public:
                 }
             }
 
-            // Update centroids
             vector<Point> newCentroids(k);
             vector<int> counts(k, 0);
 
@@ -358,7 +357,7 @@ public:
             }
         }
     }
-    static void visualizeClustersASCII(const vector<Point> &points)
+    static void visualizeClusters(const vector<Point> &points)
     {
         const int WIDTH = 60;
         const int HEIGHT = 20;
@@ -375,7 +374,6 @@ public:
         double xRange = maxX->x - minX->x;
         double yRange = maxY->y - minY->y;
 
-        // Plot points
         for (const auto &p : points)
         {
             int col = static_cast<int>((p.x - minX->x) / xRange * (WIDTH - 1));
@@ -383,7 +381,6 @@ public:
             grid[HEIGHT - 1 - row][col] = '0' + p.cluster;
         }
 
-        // Draw grid
         cout << "\nCluster Visualization:\n";
         for (const auto &row : grid)
         {
@@ -569,7 +566,7 @@ void displaymenu() // displaying menu and control the flow of the program
             cout << "\nEnter eco-activity name: ";
             cin.ignore();
             getline(cin, name);
-            cout << "Enter area covered (m²): ";
+            cout << "Enter area covered (sq m): ";
             cin >> area;
             cout << "Enter duration (months): ";
             cin >> duration;
@@ -589,7 +586,7 @@ void displaymenu() // displaying menu and control the flow of the program
 
             cout << "Performing K-means clustering...\n";
             DataAnalyzer::kmeansClustering(points, 3);
-            DataAnalyzer::visualizeClustersASCII(points);
+            DataAnalyzer::visualizeClusters(points);
 
             vector<double> cox, nox, temp;
             for (const auto &d : data)
@@ -632,7 +629,7 @@ void displaymenu() // displaying menu and control the flow of the program
             double predictedTemp = slope * cox + intercept;
 
             cout << "\nPredicted Temperature: " << fixed << setprecision(1)
-                 << predictedTemp << "°C\n";
+                 << predictedTemp << "degree C\n";
             system("pause");
             break;
         }

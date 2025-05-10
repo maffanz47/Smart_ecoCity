@@ -3,3 +3,7 @@ Electric Bus: lec100
 Building: arrar khan with capacity 12
 Combustion Bus: lec-1555
 EcoActivity: tree plantation (Area: 1000.000000 m², Duration: 24 months)
+Building: aad ka mehel with capacity 12
+Combustion Car: aac1234
+EcoActivity: ree drive (Area: 23.000000 sqm, Duration: 12 months)
+EcoActivity: 4th august drive (Area: 100.000000 sqm, Duration: 10 months)
