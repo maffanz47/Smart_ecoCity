@@ -6,10 +6,24 @@
 #include <sstream>
 #include <vector>
 #include <conio.h>
+#include <algorithm>
+#include <numeric>
+#include <limits>
+#include <ctime>
 
 using namespace std;
 
-// template <typename T>
+struct EmissionData
+{
+    double cox;
+    double nox;
+    double temp;
+};
+struct Point
+{
+    double x, y;
+    int cluster;
+};
 
 class Cityobj
 {
@@ -50,7 +64,7 @@ public:
         double nox = 100.0 * capacity / 100.0;
         fstream file("emissions.txt", ios::app);
         if (file)
-            file << name << "-" << cox << "-" << nox << "\n";
+            file << cox << "-" << nox << "\n";
         file.close();
     }
     string toString() const override
@@ -83,7 +97,7 @@ public:
             cerr << "Failed to open file!\n";
             return;
         }
-        file << name << "-" << isBus << "-" << "0" << "\n";
+        file << name << "," << isBus << "," << "0" << "\n";
         file.close();
         logEmissions();
     }
@@ -93,7 +107,7 @@ public:
         double nox = isBus ? 1000 : 150; // ppb
         fstream file("emissions.txt", ios::app);
         if (file)
-            file << name << "-" << cox << "-" << nox << "\n";
+            file << cox << "-" << nox << "\n";
         file.close();
     }
 
@@ -126,7 +140,7 @@ public:
         double nox = 10;
         fstream file("emissions.txt", ios::app);
         if (file)
-            file << name << "-" << cox << "-" << nox << "\n";
+            file << cox << "-" << nox << "\n";
         file.close();
     }
     string toString() const override
@@ -210,7 +224,7 @@ public:
         fstream file("emissions.txt", ios::app);
         if (file)
         {
-            file << name << "-" << cox << "-" << nox << "\n";
+            file << cox << "-" << nox << "\n";
         }
         file.close();
     }
@@ -249,6 +263,170 @@ public:
         return {totalCOx, totalNOx};
     }
 };
+class DataAnalyzer
+{
+public:
+    static vector<EmissionData> loadPollutionData()
+    {
+        vector<EmissionData> data;
+        ifstream file("pollution_data.csv");
+
+        if (!file)
+            throw runtime_error("Data file not found");
+
+        string line;
+        while (getline(file, line))
+        {
+            if (line.empty())
+                continue;
+
+            stringstream ss(line);
+            EmissionData entry;
+            char delim;
+
+            if (!(ss >> entry.cox >> delim >> entry.nox >> delim >> entry.temp))
+            {
+                cerr << "Invalid data format in line: " << line << endl;
+                continue;
+            }
+
+            data.push_back(entry);
+        }
+
+        if (data.empty())
+            throw runtime_error("No valid data in file");
+        return data;
+    }
+
+    static vector<Point> convertToPoints(const vector<EmissionData> &data)
+    {
+        vector<Point> points;
+        for (const auto &entry : data)
+        {
+            points.push_back({entry.cox, entry.nox, -1});
+        }
+        return points;
+    }
+
+    static void kmeansClustering(vector<Point> &points, int k, int maxIterations = 100)
+    {
+        if (points.empty())
+            throw runtime_error("No data for clustering");
+        vector<Point> centroids(k);
+        srand(time(0));
+        for (int i = 0; i < k; ++i)
+        {
+            int idx = rand() % points.size();
+            centroids[i] = {points[idx].x, points[idx].y, i};
+        }
+
+        for (int iter = 0; iter < maxIterations; ++iter)
+        {
+            // Assign points to nearest centroid
+            for (auto &p : points)
+            {
+                double minDist = numeric_limits<double>::max();
+                for (const auto &c : centroids)
+                {
+                    double dist = pow(p.x - c.x, 2) + pow(p.y - c.y, 2);
+                    if (dist < minDist)
+                    {
+                        minDist = dist;
+                        p.cluster = c.cluster;
+                    }
+                }
+            }
+
+            // Update centroids
+            vector<Point> newCentroids(k);
+            vector<int> counts(k, 0);
+
+            for (const auto &p : points)
+            {
+                newCentroids[p.cluster].x += p.x;
+                newCentroids[p.cluster].y += p.y;
+                counts[p.cluster]++;
+            }
+
+            for (int i = 0; i < k; ++i)
+            {
+                if (counts[i] > 0)
+                {
+                    centroids[i].x = newCentroids[i].x / counts[i];
+                    centroids[i].y = newCentroids[i].y / counts[i];
+                }
+            }
+        }
+    }
+    static void visualizeClustersASCII(const vector<Point> &points)
+    {
+        const int WIDTH = 60;
+        const int HEIGHT = 20;
+        vector<vector<char>> grid(HEIGHT, vector<char>(WIDTH, ' '));
+
+        // Find data ranges
+        auto [minX, maxX] = minmax_element(points.begin(), points.end(),
+                                           [](const Point &a, const Point &b)
+                                           { return a.x < b.x; });
+        auto [minY, maxY] = minmax_element(points.begin(), points.end(),
+                                           [](const Point &a, const Point &b)
+                                           { return a.y < b.y; });
+
+        double xRange = maxX->x - minX->x;
+        double yRange = maxY->y - minY->y;
+
+        // Plot points
+        for (const auto &p : points)
+        {
+            int col = static_cast<int>((p.x - minX->x) / xRange * (WIDTH - 1));
+            int row = static_cast<int>((p.y - minY->y) / yRange * (HEIGHT - 1));
+            grid[HEIGHT - 1 - row][col] = '0' + p.cluster;
+        }
+
+        // Draw grid
+        cout << "\nCluster Visualization:\n";
+        for (const auto &row : grid)
+        {
+            for (char c : row)
+            {
+                cout << (c == ' ' ? '.' : c) << ' ';
+            }
+            cout << endl;
+        }
+    }
+    static double calculateCorrelation(const vector<double> &x, const vector<double> &y)
+    {
+        double sumX = accumulate(x.begin(), x.end(), 0.0);
+        double sumY = accumulate(y.begin(), y.end(), 0.0);
+        double sumXY = inner_product(x.begin(), x.end(), y.begin(), 0.0);
+        double sumX2 = inner_product(x.begin(), x.end(), x.begin(), 0.0);
+        double sumY2 = inner_product(y.begin(), y.end(), y.begin(), 0.0);
+
+        int n = x.size();
+        double numerator = sumXY - (sumX * sumY / n);
+        double denominator = sqrt((sumX2 - pow(sumX, 2) / n)) * sqrt((sumY2 - pow(sumY, 2) / n));
+
+        return denominator == 0 ? 0 : numerator / denominator;
+    }
+    static pair<double, double> trainLinearRegression(const vector<EmissionData> &data)
+    {
+        double sumX = 0, sumY = 0, sumX2 = 0, sumXY = 0;
+        int n = data.size();
+
+        for (const auto &d : data)
+        {
+            sumX += d.cox;
+            sumY += d.temp;
+            sumX2 += d.cox * d.cox;
+            sumXY += d.cox * d.temp;
+        }
+        double denom = n * sumX2 - sumX * sumX;
+        double slope = (n * sumXY - sumX * sumY) / denom;
+        double intercept = (sumY - slope * sumX) / n;
+
+        return {slope, intercept};
+    }
+};
 
 void showHeader()
 {
@@ -280,6 +458,7 @@ e::::::::e           c:::::::cccccc:::::co :::::ooooo:::::o    C:::::CCCCCCCC:::
 void displaymenu() // displaying menu and control the flow of the program
 {
     CityLog<Cityobj> citylog("city_log.txt");
+    pair<double, double> regressionModel;
     while (true)
     {
         int choice = 1, *choice_ptr = &choice;
@@ -330,6 +509,7 @@ void displaymenu() // displaying menu and control the flow of the program
             }
         } while (true);
         string name;
+        bool modelTrained;
         switch (choice)
 
         {
@@ -402,9 +582,61 @@ void displaymenu() // displaying menu and control the flow of the program
             system("pause");
             break;
         case 5:
+        {
+            showHeader();
+            auto data = DataAnalyzer::loadPollutionData();
+            auto points = DataAnalyzer::convertToPoints(data);
+
+            cout << "Performing K-means clustering...\n";
+            DataAnalyzer::kmeansClustering(points, 3);
+            DataAnalyzer::visualizeClustersASCII(points);
+
+            vector<double> cox, nox, temp;
+            for (const auto &d : data)
+            {
+                cox.push_back(d.cox);
+                nox.push_back(d.nox);
+                temp.push_back(d.temp);
+            }
+            cout << "\nCorrelation Analysis:\n";
+            cout << "COx vs Temperature: "
+                 << DataAnalyzer::calculateCorrelation(cox, temp) << endl;
+            cout << "NOx vs Temperature: "
+                 << DataAnalyzer::calculateCorrelation(nox, temp) << endl;
+
+            regressionModel = DataAnalyzer::trainLinearRegression(data);
+            modelTrained = true;
+            cout << "\nRegression model trained!\n";
+            system("pause");
             break;
+        }
+
         case 6:
+        {
+            showHeader();
+            if (!modelTrained)
+            {
+                cout << "Please train model first using option 5!\n";
+                system("pause");
+                break;
+            }
+
+            double cox, nox;
+            cout << "Enter current COx level (ppm): ";
+            cin >> cox;
+            cout << "Enter current NOx level (ppb): ";
+            cin >> nox;
+
+            double slope = regressionModel.first;
+            double intercept = regressionModel.second;
+            double predictedTemp = slope * cox + intercept;
+
+            cout << "\nPredicted Temperature: " << fixed << setprecision(1)
+                 << predictedTemp << "°C\n";
+            system("pause");
             break;
+        }
+        break;
         case 7:
             showHeader();
             cout << "\nThank you for using the ecoCity. Goodbye!\n";

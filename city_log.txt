@@ -1,2 +1,5 @@
 Building: ali baba with capacity 120
 Electric Bus: lec100
+Building: arrar khan with capacity 12
+Combustion Bus: lec-1555
+EcoActivity: tree plantation (Area: 1000.000000 m², Duration: 24 months)
